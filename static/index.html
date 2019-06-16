@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ScoreFall</title>
+    <link rel="icon" href="scorefall_favicon.svg">
+    <style>
+    html {
+      background: #FFF;
+      border-image-width: 0px;
+    }
+    body {
+      display: flex;
+      flex-flow: column;
+      height: 100vh;
+    }
+    body, h1, h2, h3, h4, h5, h6, p {
+      margin: 0px;
+      padding: 0px;
+      border: 0px;
+    }
+    p {
+      margin-top: 14px;
+      min-height: 0px;
+    }
+    body .header {
+      background: #BDCFDD;
+      margin: 0px;
+      padding: 0px;
+      border: 0px;
+      border-image-width: 0px;
+      flex: 0 1 auto;
+      height: 54px;
+      display:flex;
+    }
+    img {
+      margin: 0px;
+      padding: 0px;
+      border: 0px;
+      display: block;
+    }
+    body .page {
+      margin: 10px auto;
+      padding: 24px;
+      border-radius: 24px;
+      width: auto;
+      max-width: 1200px;
+      border: 3px solid #0002;
+      background: #edffdd;
+    }
+    body .content {
+      overflow-y: scroll;
+      flex: 1 1 auto;
+      display: flex;
+      flex-flow: column;
+    }
+    input {
+      -moz-box-sizing: content-box;
+      -webkit-box-sizing: content-box;
+      box-sizing: content-box;
+    }
+    </style>
+  </head>
+  <body>
+    <div class="header"><a href="https://scorefall.com"><img src="scorefall_logo.svg" height="100%" width="108px"/></a>
+      <input type="search" placeholder="Search..." style="margin-top:13.5px;margin-left:10px;width:230px;height:27px;border:0px solid black;border-radius:5px;border-left:5px solid white;border-right:5px solid white"/>
+      <div style="flex: 1 1 auto;"></div>
+      <button style="width:108px;background:#0000;font-weight:bold;font-size:1.4em;border:0">Sign In</button>
+    </div>
+    <div class="content">
+      <svg id="canvas" style="flex:1 1 auto"></svg>
+    </div>
+  <script src="scorefall-ui.js"></script>
+  </body>
+</html>

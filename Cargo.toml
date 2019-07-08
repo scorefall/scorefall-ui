@@ -1,5 +1,5 @@
 [package]
-name = "scorefall-ui"
+name = "scorefall-studio"
 version = "0.1.0"
 authors = ["Jeron Aldaron Lau <jeronlau@plopgrizzly.com>", "Douglas Lau <doug.p.lau@gmail.com>"]
 edition = "2018"

@@ -54,6 +54,18 @@ fn main() {
         .get_element_by_id("content")
         .unwrap();
 
+    let scaledown = 25_000.0;
+
+    js! {
+        window.onresize = function() {
+            var content = document.getElementById("content");
+            var ratio = content.clientHeight / content.clientWidth;
+            var svg = document.getElementById("canvas");
+            var viewbox = "0 0 " + @{scaledown} + " " + (@{scaledown} * ratio);
+            svg.setAttributeNS(null, "viewBox", viewbox);
+        };
+    }
+
     let w: f64 = if let stdweb::Value::Number(n) = js! {
         return @{&content}.clientWidth;
     } {
@@ -78,8 +90,8 @@ fn main() {
     let string = include_str!("score.svg");
     let doc = score2svg::svg::read(std::io::Cursor::new(string)).unwrap();
 
-    let scaledown = 8.0;
-    let viewbox = format!("0 0 {} {}", w * scaledown, h * scaledown);
+    let ratio = h / w;
+    let viewbox = format!("0 0 {} {}", scaledown, scaledown * ratio);
     let svg = js! {
         var svg = document.getElementById("canvas");
         svg.setAttributeNS(null, "viewBox", @{viewbox});

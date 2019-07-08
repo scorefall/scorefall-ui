@@ -1,7 +1,16 @@
+#![allow(non_upper_case_globals)]
 #![recursion_limit="128"]
 
 #[macro_use]
 extern crate stdweb;
+
+macro_rules! log {
+    () => (js! { console.log!("") });
+    ($($arg:tt)*) => {
+        let text = format!("{}", format_args!($($arg)*));
+        js! { console.log(@{text}) }
+    };
+}
 
 use stdweb::traits::*;
 use stdweb::web::{
@@ -10,6 +19,10 @@ use stdweb::web::{
     IEventTarget,
     window,
 };
+
+use score2svg::svg::node::element::path::{Command, Data};
+use score2svg::svg::node::element::tag::{Use, Type, Path};
+use score2svg::svg::parser::Event;
 
 /// Update gamepad state view
 fn animate() {
@@ -37,24 +50,106 @@ fn main() {
         .get_element_by_id("canvas")
         .unwrap();
 
+    let content: stdweb::web::Element = document()
+        .get_element_by_id("content")
+        .unwrap();
+
+    let w: f64 = if let stdweb::Value::Number(n) = js! {
+        return @{&content}.clientWidth;
+    } {
+        n.into()
+    } else {
+        panic!("Failed to get width");
+    };
+
+    let h: f64 = if let stdweb::Value::Number(n) = js! {
+        return @{&content}.clientHeight;
+    } {
+        n.into()
+    } else {
+        panic!("Failed to get height");
+    };
+
     animate();
 
-    let string = include_str!("test.svg");
+    log!("YA");
+
+    const SVGNS: &'static str = "http://www.w3.org/2000/svg";
+    let string = include_str!("score.svg");
+    let doc = score2svg::svg::read(std::io::Cursor::new(string)).unwrap();
+
+    let scaledown = 8.0;
+    let viewbox = format!("0 0 {} {}", w * scaledown, h * scaledown);
+    let svg = js! {
+        var svg = document.getElementById("canvas");
+        svg.setAttributeNS(null, "viewBox", @{viewbox});
+        return svg;
+    };
+
+    let defs = js! {
+        var defs = document.createElementNS(@{SVGNS}, "defs");
+        return defs;
+    };
+
+    let page = js! {
+        var page = document.createElementNS(@{SVGNS}, "g");
+        return page;
+    };
+
+    let mut is_defs = false;
+
+    for event in doc {
+        match event {
+            Event::Tag(Path, _, attributes) => {
+                log!("Adding path");
+                let data = attributes.get("d").unwrap().to_string();
+                let shape = js! {
+                    var shape = document.createElementNS(@{SVGNS}, "path");
+                    shape.setAttributeNS(null, "d", @{data});
+                    return shape;
+                };
+                if is_defs {
+                    let id = attributes.get("id").unwrap().to_string();
+                    js! {
+                        @{&shape}.setAttributeNS(null, "id", @{id});
+                        @{&defs}.appendChild(@{&shape});
+                    }
+                } else {
+                    js! {
+                        @{&page}.appendChild(@{&shape});
+                    }
+                }
+            }
+            Event::Tag(Use, _, attributes) => {
+                let x = attributes.get("x").unwrap().to_string();
+                let y = attributes.get("y").unwrap().to_string();
+                let xlink = attributes.get("xlink:href").unwrap().to_string();
+
+                js! {
+                    var stamp = document.createElementNS(@{SVGNS}, "use");
+                    stamp.setAttributeNS(null, "x", @{x});
+                    stamp.setAttributeNS(null, "y", @{y});
+                    stamp.setAttributeNS(null, "href", @{xlink});
+                    @{&page}.appendChild(stamp);
+                }
+            }
+            Event::Tag("defs", Type::Start, _) => {
+                log!("DEFS = TRUE");
+                is_defs = true;
+            }
+            Event::Tag("defs", Type::End, _) => {
+                log!("DEFS = FALSE");
+                is_defs = false;
+                js! {
+                    @{&svg}.appendChild(@{&defs});
+                }
+            }
+            _ => {}
+        }
+    }
 
     js! {
-        var svgns = "http://www.w3.org/2000/svg";
-        var svg = document.getElementById("canvas");
-        var shape = document.createElementNS(svgns, "circle");
-        shape.setAttributeNS(null, "id", "thisid");
-        shape.setAttributeNS(null, "cx", 25);
-        shape.setAttributeNS(null, "cy", 25);
-        shape.setAttributeNS(null, "r",  20);
-        shape.setAttributeNS(null, "fill", "green");
-        svg.appendChild(shape);
-
-        alert(shape);
-
-//        @{svg}.appendChild();
+        @{&svg}.appendChild(@{page});
     };
 
     stdweb::event_loop();

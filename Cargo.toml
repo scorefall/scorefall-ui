@@ -1,8 +1,9 @@
 [package]
 name = "scorefall-ui"
 version = "0.1.0"
-authors = ["Jeron Aldaron Lau <jeronaldaron@gmail.com>", "Douglas Lau <doug.p.lau@gmail.com>"]
+authors = ["Jeron Aldaron Lau <jeronlau@plopgrizzly.com>", "Douglas Lau <doug.p.lau@gmail.com>"]
 edition = "2018"
 
 [dependencies]
 stdweb = "0.4"
+score2svg = { path = "../score2svg" }

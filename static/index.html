@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>ScoreFall</title>
+    <title>ScoreFall Studio</title>
     <link rel="icon" href="scorefall_favicon.svg">
     <style>
     html {
@@ -50,7 +50,6 @@
       background: #edffdd;
     }
     body .content {
-      overflow-y: scroll;
       flex: 1 1 auto;
       display: flex;
       flex-flow: column;
@@ -68,7 +67,7 @@
       <div style="flex: 1 1 auto;"></div>
       <button style="width:108px;background:#0000;font-weight:bold;font-size:1.4em;border:0">Sign In</button>
     </div>
-    <div class="content">
+    <div id="content" class="content">
       <svg id="canvas" style="flex:1 1 auto"></svg>
     </div>
   <script src="scorefall-ui.js"></script>

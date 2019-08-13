@@ -46,6 +46,8 @@ fn animate() {
 fn main() {
     stdweb::initialize();
 
+    let mut program = scorefall::Program::new();
+
     let svg: stdweb::web::Element = document()
         .get_element_by_id("canvas")
         .unwrap();
@@ -87,7 +89,8 @@ fn main() {
     log!("YA");
 
     const SVGNS: &'static str = "http://www.w3.org/2000/svg";
-    let string = include_str!("score.svg");
+    let sc = &program.scof;
+    let string = score2svg::test_svg(score2svg::DEFAULT, scaledown as i32, sc);
     let doc = score2svg::svg::read(std::io::Cursor::new(string)).unwrap();
 
     let ratio = h / w;
@@ -120,6 +123,13 @@ fn main() {
                     shape.setAttributeNS(null, "d", @{data});
                     return shape;
                 };
+                if let Some(fill) = attributes.get("fill") {
+                    let fill = fill.to_string();
+
+                    js! {
+                        @{&shape}.setAttributeNS(null, "fill", @{fill});
+                    }
+                }
                 if is_defs {
                     let id = attributes.get("id").unwrap().to_string();
                     js! {

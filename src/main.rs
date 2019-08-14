@@ -12,19 +12,88 @@ macro_rules! log {
     };
 }
 
+macro_rules! enclose {
+    ( ($( $x:ident ),*) $y:expr ) => {
+        {
+            $(let $x = $x.clone();)*
+            $y
+        }
+    };
+}
+
 use stdweb::traits::*;
 use stdweb::web::{
     document,
     Element,
     IEventTarget,
     window,
+    event::{
+        ResizeEvent,
+        ContextMenuEvent,
+        KeyDownEvent,
+        KeyUpEvent,
+        MouseWheelEvent,
+    },
 };
+
+use std::cell::RefCell;
+use std::rc::Rc;
 
 use score2svg::svg::node::element::path::{Command, Data};
 use score2svg::svg::node::element::tag::{Use, Type, Path};
 use score2svg::svg::parser::Event;
 
-/// Update gamepad state view
+use scorefall::Program;
+
+mod input;
+
+use input::*;
+
+struct State {
+    program: Program,
+    time_old: f64,
+    command: String,
+    input: InputState,
+    svg: stdweb::web::Element,
+}
+
+impl State {
+    fn new(svg: stdweb::web::Element) -> State {
+        State {
+            program: Program::new(),
+            time_old: 0.0,
+            command: "".to_string(),
+            input: InputState::new(),
+            svg,
+        }
+    }
+
+    fn run(&mut self, time: f64, rc: Rc<RefCell<Self>>) {
+        let dt = (time - self.time_old) as f32;
+        self.time_old = time;
+
+        if self.input.has_input {
+            if self.input.keys[KeyName::Left as usize].press() {
+                log!("LEFT");
+                self.program.left();
+                render_score(self);
+            }
+            if self.input.keys[KeyName::Right as usize].press() {
+                log!("RIGHT");
+                self.program.right();
+                render_score(self);
+            }
+        }
+
+        self.input.reset();
+
+        window().request_animation_frame(move |time| {
+            rc.borrow_mut().run(time, rc.clone());
+        });
+    }
+}
+
+/*/// Update gamepad state view
 fn animate() {
 //    let list = document().create_element("ul").unwrap();
 
@@ -38,38 +107,19 @@ fn animate() {
 
 //    state.set_text_content("");
 //    state.append_child(&list);
+}*/
 
-    // queue another animate() on the next frame
-    window().request_animation_frame(|_| animate());
-}
+const SCALEDOWN: f64 = 25_000.0;
 
-fn main() {
-    stdweb::initialize();
-
-    let mut program = scorefall::Program::new();
-
-    let svg: stdweb::web::Element = document()
-        .get_element_by_id("canvas")
-        .unwrap();
-
-    let content: stdweb::web::Element = document()
-        .get_element_by_id("content")
-        .unwrap();
-
-    let scaledown = 25_000.0;
+fn render_score(state: &State) {
+    let svg = &state.svg;
 
     js! {
-        window.onresize = function() {
-            var content = document.getElementById("content");
-            var ratio = content.clientHeight / content.clientWidth;
-            var svg = document.getElementById("canvas");
-            var viewbox = "0 0 " + @{scaledown} + " " + (@{scaledown} * ratio);
-            svg.setAttributeNS(null, "viewBox", viewbox);
-        };
+        @{&svg}.innerHTML = "";
     }
 
     let w: f64 = if let stdweb::Value::Number(n) = js! {
-        return @{&content}.clientWidth;
+        return @{svg}.clientWidth;
     } {
         n.into()
     } else {
@@ -77,24 +127,19 @@ fn main() {
     };
 
     let h: f64 = if let stdweb::Value::Number(n) = js! {
-        return @{&content}.clientHeight;
+        return @{svg}.clientHeight;
     } {
         n.into()
     } else {
         panic!("Failed to get height");
     };
 
-    animate();
-
-    log!("YA");
-
     const SVGNS: &'static str = "http://www.w3.org/2000/svg";
-    let sc = &program.scof;
-    let string = score2svg::test_svg(score2svg::DEFAULT, scaledown as i32, sc);
+    let string = score2svg::test_svg(score2svg::DEFAULT, SCALEDOWN as i32, &state.program.scof, state.program.curs);
     let doc = score2svg::svg::read(std::io::Cursor::new(string)).unwrap();
 
     let ratio = h / w;
-    let viewbox = format!("0 0 {} {}", scaledown, scaledown * ratio);
+    let viewbox = format!("0 0 {} {}", SCALEDOWN, SCALEDOWN * ratio);
     let svg = js! {
         var svg = document.getElementById("canvas");
         svg.setAttributeNS(null, "viewBox", @{viewbox});
@@ -173,6 +218,72 @@ fn main() {
     js! {
         @{&svg}.appendChild(@{page});
     };
+}
 
+fn main() {
+    stdweb::initialize();
+
+    let svg: stdweb::web::Element = document()
+        .get_element_by_id("canvas")
+        .unwrap();
+
+    let state = Rc::new(RefCell::new(State::new(svg)));
+
+    let prompt: stdweb::web::Element = document()
+        .get_element_by_id("prompt")
+        .unwrap();
+
+    window().add_event_listener( enclose!( (state) move |_: ResizeEvent| {
+        let svg = &state.borrow().svg;
+        js! {
+            var svg = @{svg};
+            var ratio = svg.clientHeight / svg.clientWidth;
+            var viewbox = "0 0 " + @{SCALEDOWN} + " " + (@{SCALEDOWN} * ratio);
+            svg.setAttributeNS(null, "viewBox", viewbox);
+        }
+    }));
+
+    window().add_event_listener(enclose!( (state) move |event: ContextMenuEvent| {
+//        js! {
+//            alert("success!");
+//        }
+        event.prevent_default();
+    }));
+
+    // CTRL-W, CTRL-Q, CTRL-T, CTRL-N aren't picked up by this (Tested chromium,
+    // firefox).
+    window().add_event_listener(enclose!( (state) move |event: KeyDownEvent| {
+        let mut is = &mut state.borrow_mut().input;
+        let key = event.key();
+        let code = event.code();
+
+        if code != "F11" {
+            is.update(key, code, event.is_composing(), true);
+            event.prevent_default();
+        }
+    }));
+    window().add_event_listener(enclose!( (state) move |event: KeyUpEvent| {
+        let mut is = &mut state.borrow_mut().input;
+        let key = event.key();
+        let code = event.code();
+
+        if code != "F11" {
+            is.update(key, code, event.is_composing(), false);
+            event.prevent_default();
+        }
+    }));
+
+    window().add_event_listener(enclose!( (state) move |event: MouseWheelEvent| {
+//        js! {
+//            alert("keydown!");
+//        }
+        event.prevent_default();
+    }));
+
+    log!("YA");
+
+    render_score(&state.borrow());
+
+    state.borrow_mut().run(0.0, state.clone());
     stdweb::event_loop();
 }

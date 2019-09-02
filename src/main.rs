@@ -39,7 +39,6 @@ use stdweb::web::{
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use score2svg::svg::node::element::path::{Command, Data};
 use score2svg::svg::node::element::tag::{Use, Type, Path};
 use score2svg::svg::parser::Event;
 
@@ -135,7 +134,9 @@ fn render_score(state: &State) {
     };
 
     const SVGNS: &'static str = "http://www.w3.org/2000/svg";
-    let string = score2svg::test_svg(score2svg::DEFAULT, SCALEDOWN as i32, &state.program.scof, state.program.curs);
+    let mut renderer = score2svg::Renderer::new(&state.program.scof, 0,
+        state.program.curs, score2svg::DEFAULT, SCALEDOWN as i32);
+    let string = renderer.render();
     let doc = score2svg::svg::read(std::io::Cursor::new(string)).unwrap();
 
     let ratio = h / w;

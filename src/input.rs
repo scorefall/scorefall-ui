@@ -69,39 +69,37 @@ impl InputState {
     }
 
     pub fn update(&mut self, key: String, code: String, ic: bool, held: bool) {
-        let state = if held {
-            KeyState::Just
-        } else {
-            KeyState::Lift
-        };
+        let state = if held { KeyState::Just } else { KeyState::Lift };
         self.has_input = true;
 
         // A unicode character has been typed.
         match code.as_str() {
-            "Numpad0" => {},
-            "Numpad1" => {},
-            "Numpad2" => {},
-            "Numpad3" => {},
-            "Numpad4" => {},
-            "Numpad5" => {},
-            "Numpad6" => {},
-            "Numpad7" => {},
-            "Numpad8" => {},
-            "Numpad9" => {},
-            "AltLeft" | "AltRight" => {},
-            "ControlLeft" | "ControlRight" => {},
-            "Space" => {},
-            "Tab" => {},
-            "Backspace" => {},
-            "Escape" => {},
-            "Enter" => {},
-            "NumpadEnter" => {},
+            "Numpad0" => {}
+            "Numpad1" => {}
+            "Numpad2" => {}
+            "Numpad3" => {}
+            "Numpad4" => {}
+            "Numpad5" => {}
+            "Numpad6" => {}
+            "Numpad7" => {}
+            "Numpad8" => {}
+            "Numpad9" => {}
+            "AltLeft" | "AltRight" => {}
+            "ControlLeft" | "ControlRight" => {}
+            "Space" => {}
+            "Tab" => {}
+            "Backspace" => {}
+            "Escape" => {}
+            "Enter" => {}
+            "NumpadEnter" => {}
             "ArrowUp" => self.keys[KeyName::Up as usize] = state,
             "ArrowDown" => self.keys[KeyName::Down as usize] = state,
             "ArrowLeft" => self.keys[KeyName::Left as usize] = state,
             "ArrowRight" => self.keys[KeyName::Right as usize] = state,
-            _ => if key.len() == 1 && !ic {
-                self.text = key.chars().nth(0).unwrap();
+            _ => {
+                if key.len() == 1 && !ic {
+                    self.text = key.chars().nth(0).unwrap();
+                }
             }
         }
     }

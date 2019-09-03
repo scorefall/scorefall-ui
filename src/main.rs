@@ -1,4 +1,4 @@
-#![recursion_limit="128"]
+#![recursion_limit = "128"]
 
 macro_rules! log {
     () => (js! { console.log!("") });
@@ -21,15 +21,11 @@ use stdweb::js;
 use stdweb::traits::*;
 use stdweb::web::{
     document,
-    IEventTarget,
-    window,
     event::{
+        ContextMenuEvent, KeyDownEvent, KeyUpEvent, MouseWheelEvent,
         ResizeEvent,
-        ContextMenuEvent,
-        KeyDownEvent,
-        KeyUpEvent,
-        MouseWheelEvent,
     },
+    window, IEventTarget,
 };
 
 use std::cell::RefCell;
@@ -135,8 +131,14 @@ fn render_score(state: &State) {
     };
 
     const SVGNS: &str = "http://www.w3.org/2000/svg";
-    let renderer = score2svg::Renderer::new(&state.program.scof, 0,
-        state.program.curs, state.program.bar, score2svg::DEFAULT, SCALEDOWN as i32);
+    let renderer = score2svg::Renderer::new(
+        &state.program.scof,
+        0,
+        state.program.curs,
+        state.program.bar,
+        score2svg::DEFAULT,
+        SCALEDOWN as i32,
+    );
     let string = renderer.render();
     let doc = score2svg::svg::read(std::io::Cursor::new(string)).unwrap();
 
@@ -225,18 +227,16 @@ fn render_score(state: &State) {
 fn main() {
     stdweb::initialize();
 
-    let svg: stdweb::web::Element = document()
-        .get_element_by_id("canvas")
-        .unwrap();
+    let svg: stdweb::web::Element =
+        document().get_element_by_id("canvas").unwrap();
 
     let state = Rc::new(RefCell::new(State::new(svg)));
 
     // FIXME: Use this.
-    let _prompt: stdweb::web::Element = document()
-        .get_element_by_id("prompt")
-        .unwrap();
+    let _prompt: stdweb::web::Element =
+        document().get_element_by_id("prompt").unwrap();
 
-    window().add_event_listener( enclose!( (state) move |_: ResizeEvent| {
+    window().add_event_listener(enclose!( (state) move |_: ResizeEvent| {
         let svg = &state.borrow().svg;
         js! {
             var svg = @{svg};
@@ -246,12 +246,14 @@ fn main() {
         }
     }));
 
-    window().add_event_listener(enclose!( (state) move |event: ContextMenuEvent| {
-//        js! {
-//            alert("success!");
-//        }
-        event.prevent_default();
-    }));
+    window().add_event_listener(
+        enclose!( (state) move |event: ContextMenuEvent| {
+        //        js! {
+        //            alert("success!");
+        //        }
+                event.prevent_default();
+            }),
+    );
 
     // CTRL-W, CTRL-Q, CTRL-T, CTRL-N aren't picked up by this (Tested chromium,
     // firefox).
@@ -276,12 +278,14 @@ fn main() {
         }
     }));
 
-    window().add_event_listener(enclose!( (state) move |event: MouseWheelEvent| {
-//        js! {
-//            alert("keydown!");
-//        }
-        event.prevent_default();
-    }));
+    window().add_event_listener(
+        enclose!( (state) move |event: MouseWheelEvent| {
+        //        js! {
+        //            alert("keydown!");
+        //        }
+                event.prevent_default();
+            }),
+    );
 
     log!("YA");
 

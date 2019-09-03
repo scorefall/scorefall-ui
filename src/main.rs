@@ -1,8 +1,4 @@
-#![allow(non_upper_case_globals)]
 #![recursion_limit="128"]
-
-#[macro_use]
-extern crate stdweb;
 
 macro_rules! log {
     () => (js! { console.log!("") });
@@ -21,10 +17,10 @@ macro_rules! enclose {
     };
 }
 
+use stdweb::js;
 use stdweb::traits::*;
 use stdweb::web::{
     document,
-    Element,
     IEventTarget,
     window,
     event::{
@@ -39,7 +35,7 @@ use stdweb::web::{
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use score2svg::svg::node::element::tag::{Use, Type, Path};
+use score2svg::svg::node::element::tag;
 use score2svg::svg::parser::Event;
 
 use scorefall::Program;
@@ -67,12 +63,13 @@ impl State {
         }
     }
 
-    fn run(&mut self, time: f64, rc: Rc<RefCell<Self>>) {
-        let dt = (time - self.time_old) as f32;
+    fn process_input(&mut self, time: f64) {
+        let _dt = (time - self.time_old) as f32;
         self.time_old = time;
 
         if self.input.has_input {
             if self.input.keys[KeyName::Left as usize].press() {
+                println!("PRINTLN LEFT");
                 log!("LEFT");
                 self.program.left();
                 render_score(self);
@@ -85,9 +82,13 @@ impl State {
         }
 
         self.input.reset();
+    }
+
+    fn run(time: f64, rc: Rc<RefCell<Self>>) {
+        rc.borrow_mut().process_input(time);
 
         window().request_animation_frame(move |time| {
-            rc.borrow_mut().run(time, rc.clone());
+            Self::run(time, rc.clone());
         });
     }
 }
@@ -133,8 +134,8 @@ fn render_score(state: &State) {
         panic!("Failed to get height");
     };
 
-    const SVGNS: &'static str = "http://www.w3.org/2000/svg";
-    let mut renderer = score2svg::Renderer::new(&state.program.scof, 0,
+    const SVGNS: &str = "http://www.w3.org/2000/svg";
+    let renderer = score2svg::Renderer::new(&state.program.scof, 0,
         state.program.curs, score2svg::DEFAULT, SCALEDOWN as i32);
     let string = renderer.render();
     let doc = score2svg::svg::read(std::io::Cursor::new(string)).unwrap();
@@ -161,7 +162,7 @@ fn render_score(state: &State) {
 
     for event in doc {
         match event {
-            Event::Tag(Path, _, attributes) => {
+            Event::Tag(tag::Path, _, attributes) => {
                 log!("Adding path");
                 let data = attributes.get("d").unwrap().to_string();
                 let shape = js! {
@@ -188,7 +189,7 @@ fn render_score(state: &State) {
                     }
                 }
             }
-            Event::Tag(Use, _, attributes) => {
+            Event::Tag(tag::Use, _, attributes) => {
                 let x = attributes.get("x").unwrap().to_string();
                 let y = attributes.get("y").unwrap().to_string();
                 let xlink = attributes.get("xlink:href").unwrap().to_string();
@@ -201,11 +202,11 @@ fn render_score(state: &State) {
                     @{&page}.appendChild(stamp);
                 }
             }
-            Event::Tag("defs", Type::Start, _) => {
+            Event::Tag("defs", tag::Type::Start, _) => {
                 log!("DEFS = TRUE");
                 is_defs = true;
             }
-            Event::Tag("defs", Type::End, _) => {
+            Event::Tag("defs", tag::Type::End, _) => {
                 log!("DEFS = FALSE");
                 is_defs = false;
                 js! {
@@ -230,7 +231,8 @@ fn main() {
 
     let state = Rc::new(RefCell::new(State::new(svg)));
 
-    let prompt: stdweb::web::Element = document()
+    // FIXME: Use this.
+    let _prompt: stdweb::web::Element = document()
         .get_element_by_id("prompt")
         .unwrap();
 
@@ -254,7 +256,7 @@ fn main() {
     // CTRL-W, CTRL-Q, CTRL-T, CTRL-N aren't picked up by this (Tested chromium,
     // firefox).
     window().add_event_listener(enclose!( (state) move |event: KeyDownEvent| {
-        let mut is = &mut state.borrow_mut().input;
+        let is = &mut state.borrow_mut().input;
         let key = event.key();
         let code = event.code();
 
@@ -264,7 +266,7 @@ fn main() {
         }
     }));
     window().add_event_listener(enclose!( (state) move |event: KeyUpEvent| {
-        let mut is = &mut state.borrow_mut().input;
+        let is = &mut state.borrow_mut().input;
         let key = event.key();
         let code = event.code();
 
@@ -285,6 +287,6 @@ fn main() {
 
     render_score(&state.borrow());
 
-    state.borrow_mut().run(0.0, state.clone());
+    State::run(0.0, state.clone());
     stdweb::event_loop();
 }

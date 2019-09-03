@@ -26,6 +26,7 @@ impl KeyState {
     }
 }
 
+/// A key on the Keyboard.
 #[repr(usize)]
 pub enum KeyName {
     Left = 0usize,
@@ -95,8 +96,8 @@ impl InputState {
             "Escape" => {},
             "Enter" => {},
             "NumpadEnter" => {},
-            "ArrowUp" => {},
-            "ArrowDown" => {},
+            "ArrowUp" => self.keys[KeyName::Up as usize] = state,
+            "ArrowDown" => self.keys[KeyName::Down as usize] = state,
             "ArrowLeft" => self.keys[KeyName::Left as usize] = state,
             "ArrowRight" => self.keys[KeyName::Right as usize] = state,
             _ => if key.len() == 1 && !ic {

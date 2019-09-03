@@ -136,7 +136,7 @@ fn render_score(state: &State) {
 
     const SVGNS: &str = "http://www.w3.org/2000/svg";
     let renderer = score2svg::Renderer::new(&state.program.scof, 0,
-        state.program.curs, score2svg::DEFAULT, SCALEDOWN as i32);
+        state.program.curs, state.program.bar, score2svg::DEFAULT, SCALEDOWN as i32);
     let string = renderer.render();
     let doc = score2svg::svg::read(std::io::Cursor::new(string)).unwrap();
 

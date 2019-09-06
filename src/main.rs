@@ -136,7 +136,6 @@ fn render_score(state: &State) {
         0,
         state.program.curs,
         state.program.bar,
-        score2svg::DEFAULT,
         SCALEDOWN as i32,
     );
     let string = renderer.render();
@@ -160,7 +159,26 @@ fn render_score(state: &State) {
         return page;
     };
 
-    let mut is_defs = false;
+    let staff_d = score2svg::staff_path_5(SCALEDOWN as i32).d;
+    log!("Adding staff: {}", staff_d);
+    let staff = js! {
+        var staff = document.createElementNS(@{SVGNS}, "path");
+        staff.setAttributeNS(null, "d", @{staff_d});
+        return staff;
+    };
+
+    for path in score2svg::bravura() {
+        let id = path.id.unwrap();
+        js! {
+            var shape = document.createElementNS(@{SVGNS}, "path");
+            shape.setAttributeNS(null, "d", @{path.d});
+            shape.setAttributeNS(null, "id", @{id});
+            @{&defs}.appendChild(shape);
+        };
+    }
+    js! {
+        @{&svg}.appendChild(@{&defs});
+    }
 
     for event in doc {
         match event {
@@ -204,16 +222,8 @@ fn render_score(state: &State) {
                         @{&shape}.setAttributeNS(null, "fill", @{fill});
                     }
                 }
-                if is_defs {
-                    let id = attributes.get("id").unwrap().to_string();
-                    js! {
-                        @{&shape}.setAttributeNS(null, "id", @{id});
-                        @{&defs}.appendChild(@{&shape});
-                    }
-                } else {
-                    js! {
-                        @{&page}.appendChild(@{&shape});
-                    }
+                js! {
+                    @{&page}.appendChild(@{&shape});
                 }
             }
             Event::Tag(tag::Use, _, attributes) => {
@@ -229,22 +239,12 @@ fn render_score(state: &State) {
                     @{&page}.appendChild(stamp);
                 }
             }
-            Event::Tag("defs", tag::Type::Start, _) => {
-                log!("DEFS = TRUE");
-                is_defs = true;
-            }
-            Event::Tag("defs", tag::Type::End, _) => {
-                log!("DEFS = FALSE");
-                is_defs = false;
-                js! {
-                    @{&svg}.appendChild(@{&defs});
-                }
-            }
             _ => {}
         }
     }
 
     js! {
+        @{&page}.appendChild(@{&staff});
         @{&svg}.appendChild(@{page});
     };
 }

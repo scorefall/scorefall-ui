@@ -164,6 +164,31 @@ fn render_score(state: &State) {
 
     for event in doc {
         match event {
+            Event::Tag(tag::Rectangle, _, attributes) => {
+                log!("Adding rect");
+                let x = attributes.get("x").unwrap().to_string();
+                let y = attributes.get("y").unwrap().to_string();
+                let width = attributes.get("width").unwrap().to_string();
+                let height = attributes.get("height").unwrap().to_string();
+                let rect = js! {
+                    var rect = document.createElementNS(@{SVGNS}, "rect");
+                    rect.setAttributeNS(null, "x", @{x});
+                    rect.setAttributeNS(null, "y", @{y});
+                    rect.setAttributeNS(null, "width", @{width});
+                    rect.setAttributeNS(null, "height", @{height});
+                    return rect;
+                };
+                if let Some(fill) = attributes.get("fill") {
+                    let fill = fill.to_string();
+
+                    js! {
+                        @{&rect}.setAttributeNS(null, "fill", @{fill});
+                    }
+                }
+                js! {
+                    @{&page}.appendChild(@{&rect});
+                }
+            },
             Event::Tag(tag::Path, _, attributes) => {
                 log!("Adding path");
                 let data = attributes.get("d").unwrap().to_string();

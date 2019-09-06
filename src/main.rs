@@ -64,15 +64,21 @@ impl State {
         self.time_old = time;
 
         if self.input.has_input {
-            if self.input.keys[KeyName::Left as usize].press() {
+            if self.input.keys[Key::Left as usize].press() {
                 println!("PRINTLN LEFT");
-                log!("LEFT");
                 self.program.left();
                 render_score(self);
             }
-            if self.input.keys[KeyName::Right as usize].press() {
-                log!("RIGHT");
+            if self.input.keys[Key::Right as usize].press() {
                 self.program.right();
+                render_score(self);
+            }
+            if self.input.keys[Key::J as usize].press() {
+                self.program.down_step();
+                render_score(self);
+            }
+            if self.input.keys[Key::K as usize].press() {
+                self.program.up_step();
                 render_score(self);
             }
         }

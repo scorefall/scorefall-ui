@@ -37,6 +37,9 @@ mod input;
 
 use input::*;
 
+const SCALEDOWN: f64 = 25_000.0;
+const SVGNS: &str = "http://www.w3.org/2000/svg";
+
 struct State {
     program: Program,
     time_old: f64,
@@ -46,6 +49,7 @@ struct State {
 }
 
 impl State {
+    /// Create a new state
     fn new(svg: stdweb::web::Element) -> State {
         State {
             program: Program::new(),
@@ -56,27 +60,38 @@ impl State {
         }
     }
 
+    /// Resize the SVG
+    fn resize(&self) {
+        log!("resize");
+        let svg = &self.svg;
+        js! {
+            var svg = @{svg};
+            var ratio = svg.clientHeight / svg.clientWidth;
+            var viewbox = "0 0 " + @{SCALEDOWN} + " " + (@{SCALEDOWN} * ratio);
+            svg.setAttributeNS(null, "viewBox", viewbox);
+        }
+    }
+
     fn process_input(&mut self, time: f64) {
         let _dt = (time - self.time_old) as f32;
         self.time_old = time;
 
         if self.input.has_input {
             if self.input.keys[Key::Left as usize].press() {
-                println!("PRINTLN LEFT");
                 self.program.left();
-                render_score(self);
+                self.render_measures();
             }
             if self.input.keys[Key::Right as usize].press() {
                 self.program.right();
-                render_score(self);
+                self.render_measures();
             }
             if self.input.keys[Key::J as usize].press() {
                 self.program.down_step();
-                render_score(self);
+                self.render_measures();
             }
             if self.input.keys[Key::K as usize].press() {
                 self.program.up_step();
-                render_score(self);
+                self.render_measures();
             }
         }
 
@@ -90,165 +105,157 @@ impl State {
             Self::run(time, rc.clone());
         });
     }
-}
 
-/*/// Update gamepad state view
-fn animate() {
-//    let list = document().create_element("ul").unwrap();
+    /// Initialize the score SVG
+    fn initialize_score(&self) {
+        let svg = &self.svg;
 
-//    for pad in Gamepad::get_all() {
-//        let item = document().create_element("li").unwrap();
-//        item.append_child(&get_pad_state(&pad));
-//        list.append_child(&item);
-//    }
-
-//    let state = document().query_selector("#state").unwrap().unwrap();
-
-//    state.set_text_content("");
-//    state.append_child(&list);
-}*/
-
-const SCALEDOWN: f64 = 25_000.0;
-
-fn render_score(state: &State) {
-    let svg = &state.svg;
-
-    js! {
-        @{&svg}.innerHTML = "";
-    }
-
-    let w: f64 = if let stdweb::Value::Number(n) = js! {
-        return @{svg}.clientWidth;
-    } {
-        n.into()
-    } else {
-        panic!("Failed to get width");
-    };
-
-    let h: f64 = if let stdweb::Value::Number(n) = js! {
-        return @{svg}.clientHeight;
-    } {
-        n.into()
-    } else {
-        panic!("Failed to get height");
-    };
-
-    const SVGNS: &str = "http://www.w3.org/2000/svg";
-
-    let ratio = h / w;
-    let viewbox = format!("0 0 {} {}", SCALEDOWN, SCALEDOWN * ratio);
-    let svg = js! {
-        var svg = document.getElementById("canvas");
-        svg.setAttributeNS(null, "viewBox", @{viewbox});
-        return svg;
-    };
-
-    let defs = js! {
-        var defs = document.createElementNS(@{SVGNS}, "defs");
-        return defs;
-    };
-
-    let page = js! {
-        var page = document.createElementNS(@{SVGNS}, "g");
-        return page;
-    };
-
-    let staff_d = score2svg::staff_path_5(SCALEDOWN as i32).d;
-    log!("Adding staff: {}", staff_d);
-    let staff = js! {
-        var staff = document.createElementNS(@{SVGNS}, "path");
-        staff.setAttributeNS(null, "d", @{staff_d});
-        return staff;
-    };
-
-    for path in score2svg::bravura() {
-        let id = path.id.unwrap();
-        log!("Adding def: {}", id);
         js! {
-            var shape = document.createElementNS(@{SVGNS}, "path");
-            shape.setAttributeNS(null, "d", @{path.d});
-            shape.setAttributeNS(null, "id", @{id});
-            @{&defs}.appendChild(shape);
-        };
-    }
-    js! {
-        @{&svg}.appendChild(@{&defs});
-    }
+            @{&svg}.innerHTML = "";
+        }
 
-    let screen_width = SCALEDOWN as i32;
-    let mut cursor = score2svg::Cursor::new(state.program.chan,
-        state.program.bar, state.program.curs);
-
-    let mut offset_x = 0;
-    for measure in 0..9 {
-        let mut bar = score2svg::MeasureElem::new(offset_x, 0);
-        bar.add_markings(&state.program.scof, state.program.chan, measure,
-            &cursor);
-
-        let g = bar.group;
-        let measure = js! {
-            var g = document.createElementNS(@{SVGNS}, "g");
-            g.setAttributeNS(null, "x", @{g.x});
-            g.setAttributeNS(null, "y", @{g.y});
-            @{&page}.appendChild(g);
-            return g;
+        let w: f64 = if let stdweb::Value::Number(n) = js! {
+            return @{svg}.clientWidth;
+        } {
+            n.into()
+        } else {
+            panic!("Failed to get width");
         };
 
-        for elem in g.elements {
-            match elem {
-                score2svg::Element::Rect(r) => {
-                    log!("Adding rect");
-                    js! {
-                        var rect = document.createElementNS(@{SVGNS}, "rect");
-                        rect.setAttributeNS(null, "x", @{r.x});
-                        rect.setAttributeNS(null, "y", @{r.y});
-                        rect.setAttributeNS(null, "width", @{r.width});
-                        rect.setAttributeNS(null, "height", @{r.height});
-                        rect.setAttributeNS(null, "fill", @{r.fill});
-                        @{&page}.appendChild(rect);
-                    }
-                },
-                score2svg::Element::Use(u) => {
-                    log!("Adding use");
-                    let xlink = format!("#{:x}", u.glyph as u32);
-                    js! {
-                        var stamp = document.createElementNS(@{SVGNS}, "use");
-                        stamp.setAttributeNS(null, "x", @{u.x});
-                        stamp.setAttributeNS(null, "y", @{u.y});
-                        stamp.setAttributeNS(null, "href", @{xlink});
-                        @{&page}.appendChild(stamp);
-                    }
-                },
-                score2svg::Element::Path(p) => {
-                    log!("Adding path");
-                    js! {
-                        var shape = document.createElementNS(@{SVGNS}, "path");
-                        shape.setAttributeNS(null, "d", @{p.d});
-                        @{&page}.appendChild(shape);
-                    };
-                },
-                _ => (),
+        let h: f64 = if let stdweb::Value::Number(n) = js! {
+            return @{svg}.clientHeight;
+        } {
+            n.into()
+        } else {
+            panic!("Failed to get height");
+        };
+
+        let ratio = h / w;
+        let viewbox = format!("0 0 {} {}", SCALEDOWN, SCALEDOWN * ratio);
+        js! {
+            var svg = document.getElementById("canvas");
+            svg.setAttributeNS(null, "viewBox", @{viewbox});
+        };
+    }
+
+    /// Render the defs to the SVG
+    fn render_defs(&self) {
+        let svg = js! { return document.getElementById("canvas"); };
+        let defs = js! { return document.createElementNS(@{SVGNS}, "defs"); };
+
+        for path in score2svg::bravura() {
+            let id = path.id.unwrap();
+            log!("Adding def: {}", id);
+            js! {
+                var shape = document.createElementNS(@{SVGNS}, "path");
+                shape.setAttributeNS(null, "d", @{path.d});
+                shape.setAttributeNS(null, "id", @{id});
+                @{&defs}.appendChild(shape);
+            };
+        }
+        js! {
+            @{&svg}.appendChild(@{&defs});
+        }
+    }
+
+    /// Render the score
+    fn render_score(&self) {
+        self.initialize_score();
+        self.render_defs();
+        js! {
+            var svg = document.getElementById("canvas");
+            var page = document.createElementNS(@{SVGNS}, "g");
+            page.setAttributeNS(null, "id", "page");
+            svg.appendChild(page);
+        };
+        self.render_measures();
+    }
+
+    /// Render the measures to the SVG
+    fn render_measures(&self) {
+        let page = js! {
+            var svg = document.getElementById("canvas");
+            var page = svg.getElementById("page");
+            page.innerHTML = "";
+            return page;
+        };
+
+        let screen_width = SCALEDOWN as i32;
+        let mut cursor = score2svg::Cursor::new(self.program.chan,
+            self.program.bar, self.program.curs);
+
+        let mut offset_x = 0;
+        for measure in 0..9 {
+            let mut bar = score2svg::MeasureElem::new(offset_x, 0);
+            bar.add_markings(&self.program.scof, self.program.chan, measure,
+                &cursor);
+
+            let g = bar.group;
+            let measure = js! {
+                var g = document.createElementNS(@{SVGNS}, "g");
+                g.setAttributeNS(null, "x", @{g.x});
+                g.setAttributeNS(null, "y", @{g.y});
+                @{&page}.appendChild(g);
+                return g;
+            };
+
+            for elem in g.elements {
+                match elem {
+                    score2svg::Element::Rect(r) => {
+                        log!("Adding rect");
+                        js! {
+                            var rect = document.createElementNS(@{SVGNS}, "rect");
+                            rect.setAttributeNS(null, "x", @{r.x});
+                            rect.setAttributeNS(null, "y", @{r.y});
+                            rect.setAttributeNS(null, "width", @{r.width});
+                            rect.setAttributeNS(null, "height", @{r.height});
+                            rect.setAttributeNS(null, "fill", @{r.fill});
+                            @{&page}.appendChild(rect);
+                        }
+                    },
+                    score2svg::Element::Use(u) => {
+                        log!("Adding use");
+                        let xlink = format!("#{:x}", u.glyph as u32);
+                        js! {
+                            var stamp = document.createElementNS(@{SVGNS}, "use");
+                            stamp.setAttributeNS(null, "x", @{u.x});
+                            stamp.setAttributeNS(null, "y", @{u.y});
+                            stamp.setAttributeNS(null, "href", @{xlink});
+                            @{&page}.appendChild(stamp);
+                        }
+                    },
+                    score2svg::Element::Path(p) => {
+                        log!("Adding path");
+                        js! {
+                            var shape = document.createElementNS(@{SVGNS}, "path");
+                            shape.setAttributeNS(null, "d", @{p.d});
+                            @{&page}.appendChild(shape);
+                        };
+                    },
+                    _ => (),
+                }
+            }
+
+            offset_x += bar.width;
+            if offset_x > screen_width {
+                break;
             }
         }
 
-        offset_x += bar.width;
-        if offset_x > screen_width {
-            break;
-        }
+        let staff_d = score2svg::staff_path_5(SCALEDOWN as i32).d;
+        log!("Adding staff: {}", staff_d);
+        js! {
+            var staff = document.createElementNS(@{SVGNS}, "path");
+            staff.setAttributeNS(null, "d", @{staff_d});
+            @{&page}.appendChild(staff);
+        };
     }
-
-    js! {
-        @{&page}.appendChild(@{&staff});
-        @{&svg}.appendChild(@{page});
-    };
 }
 
 fn main() {
     stdweb::initialize();
 
-    let svg: stdweb::web::Element =
-        document().get_element_by_id("canvas").unwrap();
-
+    let svg = document().get_element_by_id("canvas").unwrap();
     let state = Rc::new(RefCell::new(State::new(svg)));
 
     // FIXME: Use this.
@@ -256,13 +263,7 @@ fn main() {
         document().get_element_by_id("prompt").unwrap();
 
     window().add_event_listener(enclose!( (state) move |_: ResizeEvent| {
-        let svg = &state.borrow().svg;
-        js! {
-            var svg = @{svg};
-            var ratio = svg.clientHeight / svg.clientWidth;
-            var viewbox = "0 0 " + @{SCALEDOWN} + " " + (@{SCALEDOWN} * ratio);
-            svg.setAttributeNS(null, "viewBox", viewbox);
-        }
+        state.borrow().resize();
     }));
 
     window().add_event_listener(
@@ -308,7 +309,7 @@ fn main() {
 
     log!("YA");
 
-    render_score(&state.borrow());
+    state.borrow().render_score();
 
     State::run(0.0, state.clone());
     stdweb::event_loop();

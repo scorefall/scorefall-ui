@@ -222,6 +222,8 @@ impl InputState {
             "AltRight" => Key::RightAlt,
             "ControlLeft" => Key::LeftCtrl,
             "ControlRight" => Key::RightCtrl,
+            "ShiftLeft" => Key::LeftShift,
+            "ShiftRight" => Key::RightShift,
             "Space" => Key::Space,
             "Tab" => Key::Tab,
             "Backspace" => Key::Backspace,

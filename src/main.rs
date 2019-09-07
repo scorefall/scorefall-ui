@@ -73,13 +73,25 @@ impl State {
                 self.program.right();
                 render_score(self);
             }
-            if self.input.keys[Key::J as usize].press() {
-                self.program.down_step();
-                render_score(self);
-            }
-            if self.input.keys[Key::K as usize].press() {
-                self.program.up_step();
-                render_score(self);
+            if self.input.keys[Key::LeftShift as usize].held() || self.input.keys[Key::RightShift as usize].held()
+            {
+                if self.input.keys[Key::J as usize].press() {
+                    self.program.down_half_step();
+                    render_score(self);
+                }
+                if self.input.keys[Key::K as usize].press() {
+                    self.program.up_half_step();
+                    render_score(self);
+                }
+            } else {
+                if self.input.keys[Key::J as usize].press() {
+                    self.program.down_step();
+                    render_score(self);
+                }
+                if self.input.keys[Key::K as usize].press() {
+                    self.program.up_step();
+                    render_score(self);
+                }
             }
         }
 

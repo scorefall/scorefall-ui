@@ -31,9 +31,6 @@ use stdweb::web::{
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use score2svg::svg::node::element::tag;
-use score2svg::svg::parser::Event;
-
 use scorefall::Program;
 
 mod input;
@@ -137,15 +134,6 @@ fn render_score(state: &State) {
     };
 
     const SVGNS: &str = "http://www.w3.org/2000/svg";
-    let renderer = score2svg::Renderer::new(
-        &state.program.scof,
-        0,
-        state.program.curs,
-        state.program.bar,
-        SCALEDOWN as i32,
-    );
-    let string = renderer.render();
-    let doc = score2svg::svg::read(std::io::Cursor::new(string)).unwrap();
 
     let ratio = h / w;
     let viewbox = format!("0 0 {} {}", SCALEDOWN, SCALEDOWN * ratio);
@@ -175,6 +163,7 @@ fn render_score(state: &State) {
 
     for path in score2svg::bravura() {
         let id = path.id.unwrap();
+        log!("Adding def: {}", id);
         js! {
             var shape = document.createElementNS(@{SVGNS}, "path");
             shape.setAttributeNS(null, "d", @{path.d});
@@ -186,66 +175,65 @@ fn render_score(state: &State) {
         @{&svg}.appendChild(@{&defs});
     }
 
-    for event in doc {
-        match event {
-            Event::Tag(tag::Rectangle, _, attributes) => {
-                log!("Adding rect");
-                let x = attributes.get("x").unwrap().to_string();
-                let y = attributes.get("y").unwrap().to_string();
-                let width = attributes.get("width").unwrap().to_string();
-                let height = attributes.get("height").unwrap().to_string();
-                let rect = js! {
-                    var rect = document.createElementNS(@{SVGNS}, "rect");
-                    rect.setAttributeNS(null, "x", @{x});
-                    rect.setAttributeNS(null, "y", @{y});
-                    rect.setAttributeNS(null, "width", @{width});
-                    rect.setAttributeNS(null, "height", @{height});
-                    return rect;
-                };
-                if let Some(fill) = attributes.get("fill") {
-                    let fill = fill.to_string();
+    let screen_width = SCALEDOWN as i32;
+    let mut cursor = score2svg::Cursor::new(state.program.chan,
+        state.program.bar, state.program.curs);
 
+    let mut offset_x = 0;
+    for measure in 0..9 {
+        let mut bar = score2svg::MeasureElem::new(offset_x, 0);
+        bar.add_markings(&state.program.scof, state.program.chan, measure,
+            &cursor);
+
+        let g = bar.group;
+        let measure = js! {
+            var g = document.createElementNS(@{SVGNS}, "g");
+            g.setAttributeNS(null, "x", @{g.x});
+            g.setAttributeNS(null, "y", @{g.y});
+            @{&page}.appendChild(g);
+            return g;
+        };
+
+        for elem in g.elements {
+            match elem {
+                score2svg::Element::Rect(r) => {
+                    log!("Adding rect");
                     js! {
-                        @{&rect}.setAttributeNS(null, "fill", @{fill});
+                        var rect = document.createElementNS(@{SVGNS}, "rect");
+                        rect.setAttributeNS(null, "x", @{r.x});
+                        rect.setAttributeNS(null, "y", @{r.y});
+                        rect.setAttributeNS(null, "width", @{r.width});
+                        rect.setAttributeNS(null, "height", @{r.height});
+                        rect.setAttributeNS(null, "fill", @{r.fill});
+                        @{&page}.appendChild(rect);
                     }
-                }
-                js! {
-                    @{&page}.appendChild(@{&rect});
-                }
-            },
-            Event::Tag(tag::Path, _, attributes) => {
-                log!("Adding path");
-                let data = attributes.get("d").unwrap().to_string();
-                let shape = js! {
-                    var shape = document.createElementNS(@{SVGNS}, "path");
-                    shape.setAttributeNS(null, "d", @{data});
-                    return shape;
-                };
-                if let Some(fill) = attributes.get("fill") {
-                    let fill = fill.to_string();
-
+                },
+                score2svg::Element::Use(u) => {
+                    log!("Adding use");
+                    let xlink = format!("#{:x}", u.glyph as u32);
                     js! {
-                        @{&shape}.setAttributeNS(null, "fill", @{fill});
+                        var stamp = document.createElementNS(@{SVGNS}, "use");
+                        stamp.setAttributeNS(null, "x", @{u.x});
+                        stamp.setAttributeNS(null, "y", @{u.y});
+                        stamp.setAttributeNS(null, "href", @{xlink});
+                        @{&page}.appendChild(stamp);
                     }
-                }
-                js! {
-                    @{&page}.appendChild(@{&shape});
-                }
+                },
+                score2svg::Element::Path(p) => {
+                    log!("Adding path");
+                    js! {
+                        var shape = document.createElementNS(@{SVGNS}, "path");
+                        shape.setAttributeNS(null, "d", @{p.d});
+                        @{&page}.appendChild(shape);
+                    };
+                },
+                _ => (),
             }
-            Event::Tag(tag::Use, _, attributes) => {
-                let x = attributes.get("x").unwrap().to_string();
-                let y = attributes.get("y").unwrap().to_string();
-                let xlink = attributes.get("xlink:href").unwrap().to_string();
+        }
 
-                js! {
-                    var stamp = document.createElementNS(@{SVGNS}, "use");
-                    stamp.setAttributeNS(null, "x", @{x});
-                    stamp.setAttributeNS(null, "y", @{y});
-                    stamp.setAttributeNS(null, "href", @{xlink});
-                    @{&page}.appendChild(stamp);
-                }
-            }
-            _ => {}
+        offset_x += bar.width;
+        if offset_x > screen_width {
+            break;
         }
     }
 

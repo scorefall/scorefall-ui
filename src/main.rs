@@ -145,7 +145,6 @@ impl State {
 
         for path in score2svg::bravura() {
             let id = path.id.unwrap();
-            log!("Adding def: {}", id);
             js! {
                 var shape = document.createElementNS(@{SVGNS}, "path");
                 shape.setAttributeNS(null, "d", @{path.d});
@@ -173,6 +172,7 @@ impl State {
 
     /// Render the measures to the SVG
     fn render_measures(&self) {
+        log!("render measures");
         let page = js! {
             var svg = document.getElementById("canvas");
             var page = svg.getElementById("page");
@@ -181,74 +181,92 @@ impl State {
         };
 
         let screen_width = SCALEDOWN as i32;
-        let mut cursor = score2svg::Cursor::new(self.program.chan,
+        let cursor = score2svg::Cursor::new(self.program.chan,
             self.program.bar, self.program.curs);
 
         let mut offset_x = 0;
         for measure in 0..9 {
-            let mut bar = score2svg::MeasureElem::new(offset_x, 0);
-            bar.add_markings(&self.program.scof, self.program.chan, measure,
-                &cursor);
-
-            let g = bar.group;
-            let measure = js! {
-                var g = document.createElementNS(@{SVGNS}, "g");
-                g.setAttributeNS(null, "x", @{g.x});
-                g.setAttributeNS(null, "y", @{g.y});
-                @{&page}.appendChild(g);
-                return g;
-            };
-
-            for elem in g.elements {
-                match elem {
-                    score2svg::Element::Rect(r) => {
-                        log!("Adding rect");
-                        js! {
-                            var rect = document.createElementNS(@{SVGNS}, "rect");
-                            rect.setAttributeNS(null, "x", @{r.x});
-                            rect.setAttributeNS(null, "y", @{r.y});
-                            rect.setAttributeNS(null, "width", @{r.width});
-                            rect.setAttributeNS(null, "height", @{r.height});
-                            rect.setAttributeNS(null, "fill", @{r.fill});
-                            @{&page}.appendChild(rect);
-                        }
-                    },
-                    score2svg::Element::Use(u) => {
-                        log!("Adding use");
-                        let xlink = format!("#{:x}", u.glyph as u32);
-                        js! {
-                            var stamp = document.createElementNS(@{SVGNS}, "use");
-                            stamp.setAttributeNS(null, "x", @{u.x});
-                            stamp.setAttributeNS(null, "y", @{u.y});
-                            stamp.setAttributeNS(null, "href", @{xlink});
-                            @{&page}.appendChild(stamp);
-                        }
-                    },
-                    score2svg::Element::Path(p) => {
-                        log!("Adding path");
-                        js! {
-                            var shape = document.createElementNS(@{SVGNS}, "path");
-                            shape.setAttributeNS(null, "d", @{p.d});
-                            @{&page}.appendChild(shape);
-                        };
-                    },
-                    _ => (),
-                }
-            }
-
-            offset_x += bar.width;
+            let width = self.render_measure(measure, offset_x, &cursor);
+            offset_x += width;
             if offset_x > screen_width {
                 break;
             }
         }
 
         let staff_d = score2svg::staff_path_5(SCALEDOWN as i32).d;
-        log!("Adding staff: {}", staff_d);
         js! {
             var staff = document.createElementNS(@{SVGNS}, "path");
             staff.setAttributeNS(null, "d", @{staff_d});
             @{&page}.appendChild(staff);
         };
+    }
+
+    fn render_measure(&self, measure: usize, offset_x: i32,
+        cursor: &score2svg::Cursor) -> i32
+    {
+        let page = js! {
+            var svg = document.getElementById("canvas");
+            var page = svg.getElementById("page");
+            return page;
+        };
+        let bar_id = &format!("m{}", measure);
+        let old_g = js! {
+            var svg = document.getElementById("canvas");
+            var old_g = svg.getElementById(@{&bar_id});
+            return old_g;
+        };
+        let mut bar = score2svg::MeasureElem::new();
+        bar.add_markings(&self.program.scof, self.program.chan, measure,
+            &cursor);
+
+        let offset_y = 0;
+        let trans = format!("translate({} {})", offset_x, offset_y);
+        let bar_g = js! {
+            var g = document.createElementNS(@{SVGNS}, "g");
+            g.setAttributeNS(null, "id", @{&bar_id});
+            g.setAttributeNS(null, "transform", @{&trans});
+            if (@{&old_g} !== null) {
+                @{&old_g}.replaceWith(g);
+            } else {
+                @{&page}.appendChild(g);
+            }
+            return g;
+        };
+
+        for elem in bar.elements {
+            match elem {
+                score2svg::Element::Rect(r) => {
+                    js! {
+                        var rect = document.createElementNS(@{SVGNS}, "rect");
+                        rect.setAttributeNS(null, "x", @{r.x});
+                        rect.setAttributeNS(null, "y", @{r.y});
+                        rect.setAttributeNS(null, "width", @{r.width});
+                        rect.setAttributeNS(null, "height", @{r.height});
+                        rect.setAttributeNS(null, "fill", @{r.fill});
+                        @{&bar_g}.appendChild(rect);
+                    }
+                },
+                score2svg::Element::Use(u) => {
+                    let xlink = format!("#{:x}", u.glyph as u32);
+                    js! {
+                        var stamp = document.createElementNS(@{SVGNS}, "use");
+                        stamp.setAttributeNS(null, "x", @{u.x});
+                        stamp.setAttributeNS(null, "y", @{u.y});
+                        stamp.setAttributeNS(null, "href", @{xlink});
+                        @{&bar_g}.appendChild(stamp);
+                    }
+                },
+                score2svg::Element::Path(p) => {
+                    js! {
+                        var shape = document.createElementNS(@{SVGNS}, "path");
+                        shape.setAttributeNS(null, "d", @{p.d});
+                        @{&bar_g}.appendChild(shape);
+                    };
+                },
+                _ => (),
+            }
+        }
+        bar.width
     }
 }
 

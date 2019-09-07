@@ -66,10 +66,9 @@ impl State {
         log!("resize");
         let svg = &self.svg;
         js! {
-            var svg = @{svg};
-            var ratio = svg.clientHeight / svg.clientWidth;
+            var ratio = @{svg}.clientHeight / @{svg}.clientWidth;
             var viewbox = "0 0 " + @{SCALEDOWN} + " " + (@{SCALEDOWN} * ratio);
-            svg.setAttributeNS(null, "viewBox", viewbox);
+            @{svg}.setAttributeNS(null, "viewBox", viewbox);
         }
     }
 
@@ -122,38 +121,17 @@ impl State {
     /// Initialize the score SVG
     fn initialize_score(&self) {
         let svg = &self.svg;
-
         js! {
-            @{&svg}.innerHTML = "";
-        }
-
-        let w: f64 = if let stdweb::Value::Number(n) = js! {
-            return @{svg}.clientWidth;
-        } {
-            n.into()
-        } else {
-            panic!("Failed to get width");
-        };
-
-        let h: f64 = if let stdweb::Value::Number(n) = js! {
-            return @{svg}.clientHeight;
-        } {
-            n.into()
-        } else {
-            panic!("Failed to get height");
-        };
-
-        let ratio = h / w;
-        let viewbox = format!("0 0 {} {}", SCALEDOWN, SCALEDOWN * ratio);
-        js! {
-            var svg = document.getElementById("canvas");
-            svg.setAttributeNS(null, "viewBox", @{viewbox});
+            @{svg}.innerHTML = "";
+            var page = document.createElementNS(@{SVGNS}, "g");
+            page.setAttributeNS(null, "id", "page");
+            @{svg}.appendChild(page);
         };
     }
 
     /// Render the defs to the SVG
     fn render_defs(&self) {
-        let svg = js! { return document.getElementById("canvas"); };
+        let svg = &self.svg;
         let defs = js! { return document.createElementNS(@{SVGNS}, "defs"); };
 
         for path in score2svg::bravura() {
@@ -166,29 +144,24 @@ impl State {
             };
         }
         js! {
-            @{&svg}.appendChild(@{&defs});
+            @{svg}.appendChild(@{&defs});
         }
     }
 
     /// Render the score
     fn render_score(&self) {
         self.initialize_score();
+        self.resize();
         self.render_defs();
-        js! {
-            var svg = document.getElementById("canvas");
-            var page = document.createElementNS(@{SVGNS}, "g");
-            page.setAttributeNS(null, "id", "page");
-            svg.appendChild(page);
-        };
         self.render_measures();
     }
 
     /// Render the measures to the SVG
     fn render_measures(&self) {
         log!("render measures");
+        let svg = &self.svg;
         let page = js! {
-            var svg = document.getElementById("canvas");
-            var page = svg.getElementById("page");
+            var page = @{svg}.getElementById("page");
             page.innerHTML = "";
             return page;
         };
@@ -208,10 +181,10 @@ impl State {
         let bar_id = &format!("m{}", measure);
         let offset_y = 0;
         let trans = &format!("translate({} {})", offset_x, offset_y);
+        let svg = &self.svg;
         let bar_g = js! {
-            var svg = document.getElementById("canvas");
-            var page = svg.getElementById("page");
-            var old_g = svg.getElementById(@{bar_id});
+            var page = @{svg}.getElementById("page");
+            var old_g = @{svg}.getElementById(@{bar_id});
             var bar_g = document.createElementNS(@{SVGNS}, "g");
             bar_g.setAttributeNS(null, "id", @{bar_id});
             bar_g.setAttributeNS(null, "transform", @{trans});

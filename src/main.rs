@@ -193,32 +193,19 @@ impl State {
             return page;
         };
 
-        let screen_width = SCALEDOWN as i32;
-
         let mut offset_x = 0;
         for measure in 0..9 {
             let width = self.render_measure(measure, offset_x,
                 &self.program.cursor);
-            log!("width {}", width);
+            log!("measure: {}  width {}", measure, width);
             offset_x += width;
-            if offset_x > screen_width {
-                break;
-            }
         }
-
-        let staff_d = score2svg::staff_path_5(SCALEDOWN as i32).d;
-        js! {
-            var staff = document.createElementNS(@{SVGNS}, "path");
-            staff.setAttributeNS(null, "d", @{staff_d});
-            @{&page}.appendChild(staff);
-        };
     }
 
     fn render_measure(&self, measure: usize, offset_x: i32, cursor: &Cursor)
         -> i32
     {
         let bar_id = &format!("m{}", measure);
-        log!("measure {}", bar_id);
         let offset_y = 0;
         let trans = &format!("translate({} {})", offset_x, offset_y);
         let bar_g = js! {
@@ -239,6 +226,7 @@ impl State {
         let mut curs = Cursor::new(measure, 0, 0);
         let mut bar = score2svg::MeasureElem::new();
         bar.add_markings(&self.program.scof, &mut curs, &cursor);
+        bar.add_staff_5();
 
         for elem in bar.elements {
             match elem {

@@ -204,34 +204,27 @@ impl State {
     fn render_measure(&self, measure: usize, offset_x: i32,
         cursor: &score2svg::Cursor) -> i32
     {
-        let page = js! {
+        let bar_id = &format!("m{}", measure);
+        let offset_y = 0;
+        let trans = &format!("translate({} {})", offset_x, offset_y);
+        let bar_g = js! {
             var svg = document.getElementById("canvas");
             var page = svg.getElementById("page");
-            return page;
+            var old_g = svg.getElementById(@{bar_id});
+            var bar_g = document.createElementNS(@{SVGNS}, "g");
+            bar_g.setAttributeNS(null, "id", @{bar_id});
+            bar_g.setAttributeNS(null, "transform", @{trans});
+            if (old_g !== null) {
+                old_g.replaceWith(bar_g);
+            } else {
+                page.appendChild(bar_g);
+            }
+            return bar_g;
         };
-        let bar_id = &format!("m{}", measure);
-        let old_g = js! {
-            var svg = document.getElementById("canvas");
-            var old_g = svg.getElementById(@{&bar_id});
-            return old_g;
-        };
+
         let mut bar = score2svg::MeasureElem::new();
         bar.add_markings(&self.program.scof, self.program.chan, measure,
             &cursor);
-
-        let offset_y = 0;
-        let trans = format!("translate({} {})", offset_x, offset_y);
-        let bar_g = js! {
-            var g = document.createElementNS(@{SVGNS}, "g");
-            g.setAttributeNS(null, "id", @{&bar_id});
-            g.setAttributeNS(null, "transform", @{&trans});
-            if (@{&old_g} !== null) {
-                @{&old_g}.replaceWith(g);
-            } else {
-                @{&page}.appendChild(g);
-            }
-            return g;
-        };
 
         for elem in bar.elements {
             match elem {

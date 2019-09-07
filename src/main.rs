@@ -89,20 +89,20 @@ impl State {
             {
                 if self.input.keys[Key::J as usize].press() {
                     self.program.down_half_step();
-                    render_score(self);
+                    self.render_measures();
                 }
                 if self.input.keys[Key::K as usize].press() {
                     self.program.up_half_step();
-                    render_score(self);
+                    self.render_measures();
                 }
             } else {
                 if self.input.keys[Key::J as usize].press() {
                     self.program.down_step();
-                    render_score(self);
+                    self.render_measures();
                 }
                 if self.input.keys[Key::K as usize].press() {
                     self.program.up_step();
-                    render_score(self);
+                    self.render_measures();
                 }
             }
         }

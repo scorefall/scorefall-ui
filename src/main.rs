@@ -31,6 +31,7 @@ use stdweb::web::{
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use scof::Cursor;
 use scorefall::Program;
 
 mod input;
@@ -193,12 +194,12 @@ impl State {
         };
 
         let screen_width = SCALEDOWN as i32;
-        let cursor = score2svg::Cursor::new(self.program.chan,
-            self.program.bar, self.program.curs);
 
         let mut offset_x = 0;
         for measure in 0..9 {
-            let width = self.render_measure(measure, offset_x, &cursor);
+            let width = self.render_measure(measure, offset_x,
+                &self.program.cursor);
+            log!("width {}", width);
             offset_x += width;
             if offset_x > screen_width {
                 break;
@@ -213,10 +214,11 @@ impl State {
         };
     }
 
-    fn render_measure(&self, measure: usize, offset_x: i32,
-        cursor: &score2svg::Cursor) -> i32
+    fn render_measure(&self, measure: usize, offset_x: i32, cursor: &Cursor)
+        -> i32
     {
         let bar_id = &format!("m{}", measure);
+        log!("measure {}", bar_id);
         let offset_y = 0;
         let trans = &format!("translate({} {})", offset_x, offset_y);
         let bar_g = js! {
@@ -234,9 +236,9 @@ impl State {
             return bar_g;
         };
 
+        let mut curs = Cursor::new(measure, 0, 0);
         let mut bar = score2svg::MeasureElem::new();
-        bar.add_markings(&self.program.scof, self.program.chan, measure,
-            &cursor);
+        bar.add_markings(&self.program.scof, &mut curs, &cursor);
 
         for elem in bar.elements {
             match elem {

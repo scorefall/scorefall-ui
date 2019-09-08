@@ -32,6 +32,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use scof::Cursor;
+use score2svg::{MeasureElem, Staff};
 use scorefall::Program;
 
 mod input;
@@ -203,9 +204,9 @@ impl State {
         };
 
         let mut curs = Cursor::new(measure, 0, 0);
-        let mut bar = score2svg::MeasureElem::new();
+        let mut bar = MeasureElem::new(Staff::new(5));
         bar.add_markings(&self.program.scof, &mut curs, &cursor);
-        bar.add_staff_5();
+        bar.add_staff();
 
         for elem in bar.elements {
             if let Some(e) = create_elem(elem) {

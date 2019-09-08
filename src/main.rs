@@ -174,17 +174,14 @@ impl State {
 
         let mut offset_x = 0;
         for measure in 0..9 {
-            let width = self.render_measure(measure, offset_x,
-                &self.program.cursor);
+            let width = self.render_measure(measure, offset_x);
             log!("measure: {}  width {}", measure, width);
             offset_x += width;
         }
     }
 
     /// Render one measure
-    fn render_measure(&self, measure: usize, offset_x: i32, cursor: &Cursor)
-        -> i32
-    {
+    fn render_measure(&self, measure: usize, offset_x: i32) -> i32 {
         let bar_id = &format!("m{}", measure);
         let offset_y = 0;
         let trans = &format!("translate({} {})", offset_x, offset_y);
@@ -205,7 +202,10 @@ impl State {
 
         let mut curs = Cursor::new(measure, 0, 0);
         let mut bar = MeasureElem::new(Staff::new(5));
-        bar.add_markings(&self.program.scof, &mut curs, &cursor);
+        if curs == self.program.cursor.first_marking() {
+            bar.add_cursor(&self.program.scof, &self.program.cursor);
+        }
+        bar.add_markings(&self.program.scof, &mut curs);
         bar.add_staff();
 
         for elem in bar.elements {

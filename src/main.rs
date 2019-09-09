@@ -227,6 +227,8 @@ fn create_elem(elem: score2svg::Element) -> Option<stdweb::Value> {
                 rect.setAttributeNS(null, "y", @{r.y});
                 rect.setAttributeNS(null, "width", @{r.width});
                 rect.setAttributeNS(null, "height", @{r.height});
+                rect.setAttributeNS(null, "rx", @{r.rx});
+                rect.setAttributeNS(null, "ry", @{r.ry});
                 rect.setAttributeNS(null, "fill", @{r.fill});
                 return rect;
             })

@@ -201,7 +201,8 @@ impl State {
         };
 
         let mut curs = Cursor::new(measure, 0, 0);
-        let mut bar = MeasureElem::new(Staff::new(5));
+        // Alto clef has 0 steps offset
+        let mut bar = MeasureElem::new(Staff::new(5, 0));
         if curs == self.program.cursor.first_marking() {
             bar.add_cursor(&self.program.scof, &self.program.cursor);
         }
@@ -227,8 +228,14 @@ fn create_elem(elem: score2svg::Element) -> Option<stdweb::Value> {
                 rect.setAttributeNS(null, "y", @{r.y});
                 rect.setAttributeNS(null, "width", @{r.width});
                 rect.setAttributeNS(null, "height", @{r.height});
-                rect.setAttributeNS(null, "rx", @{r.rx});
-                rect.setAttributeNS(null, "ry", @{r.ry});
+                var rx = @{r.rx};
+                if (rx !== null) {
+                    rect.setAttributeNS(null, "rx", rx);
+                }
+                var ry = @{r.ry};
+                if (ry !== null) {
+                    rect.setAttributeNS(null, "ry", ry);
+                }
                 rect.setAttributeNS(null, "fill", @{r.fill});
                 return rect;
             })

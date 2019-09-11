@@ -32,11 +32,14 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use scof::Cursor;
+use score2svg::{MeasureElem, Staff};
 use scorefall::Program;
 
 mod input;
 
 use input::*;
+
+type Result<T> = core::result::Result<T, Box<dyn std::error::Error>>;
 
 const SCALEDOWN: f64 = 25_000.0;
 const SVGNS: &str = "http://www.w3.org/2000/svg";
@@ -62,14 +65,17 @@ impl State {
     }
 
     /// Resize the SVG
-    fn resize(&self) {
+    fn resize(&self) -> Result<()> {
         log!("resize");
         let svg = &self.svg;
-        js! {
+        let viewbox = js! {
             var ratio = @{svg}.clientHeight / @{svg}.clientWidth;
-            var viewbox = "0 0 " + @{SCALEDOWN} + " " + (@{SCALEDOWN} * ratio);
-            @{svg}.setAttributeNS(null, "viewBox", viewbox);
+            return "0 0 " + @{SCALEDOWN} + " " + @{SCALEDOWN} * ratio;
+        };
+        if let Some(vb) = viewbox.as_str() {
+            svg.set_attribute("viewBox", vb)?;
         }
+        Ok(())
     }
 
     fn process_input(&mut self, time: f64) {
@@ -154,65 +160,63 @@ impl State {
     }
 
     /// Initialize the score SVG
-    fn initialize_score(&self) {
+    fn initialize_score(&self) -> Result<()> {
+        let page = document().create_element_ns(SVGNS, "g")?;
+        page.set_attribute("id", "page")?;
         let svg = &self.svg;
         js! {
             @{svg}.innerHTML = "";
-            var page = document.createElementNS(@{SVGNS}, "g");
-            page.setAttributeNS(null, "id", "page");
-            @{svg}.appendChild(page);
+            @{svg}.appendChild(@{page});
         };
+        Ok(())
     }
 
     /// Render the defs to the SVG
-    fn render_defs(&self) {
+    fn render_defs(&self) -> Result<()> {
         let svg = &self.svg;
-        let defs = js! { return document.createElementNS(@{SVGNS}, "defs"); };
+        let defs = document().create_element_ns(SVGNS, "defs")?;
 
         for path in score2svg::bravura() {
             let id = path.id.unwrap();
-            js! {
-                var shape = document.createElementNS(@{SVGNS}, "path");
-                shape.setAttributeNS(null, "d", @{path.d});
-                shape.setAttributeNS(null, "id", @{id});
-                @{&defs}.appendChild(shape);
-            };
+            let shape = document().create_element_ns(SVGNS, "path")?;
+            shape.set_attribute("d", &path.d)?;
+            shape.set_attribute("id", &id)?;
+            defs.append_child(&shape);
         }
         js! {
             @{svg}.appendChild(@{&defs});
         }
+        Ok(())
     }
 
     /// Render the score
-    fn render_score(&self) {
-        self.initialize_score();
-        self.resize();
-        self.render_defs();
+    fn render_score(&self) -> Result<()> {
+        self.initialize_score()?;
+        self.resize()?;
+        self.render_defs()?;
         self.render_measures();
+        Ok(())
     }
 
     /// Render the measures to the SVG
     fn render_measures(&self) {
         log!("render measures");
         let svg = &self.svg;
-        let page = js! {
+        js! {
             var page = @{svg}.getElementById("page");
             page.innerHTML = "";
-            return page;
         };
 
         let mut offset_x = 0;
         for measure in 0..9 {
-            let width = self.render_measure(measure, offset_x,
-                &self.program.cursor);
+            let width = self.render_measure(measure, offset_x);
             log!("measure: {}  width {}", measure, width);
             offset_x += width;
         }
     }
 
-    fn render_measure(&self, measure: usize, offset_x: i32, cursor: &Cursor)
-        -> i32
-    {
+    /// Render one measure
+    fn render_measure(&self, measure: usize, offset_x: i32) -> i32 {
         let bar_id = &format!("m{}", measure);
         let offset_y = 0;
         let trans = &format!("translate({} {})", offset_x, offset_y);
@@ -232,44 +236,63 @@ impl State {
         };
 
         let mut curs = Cursor::new(measure, 0, 0);
-        let mut bar = score2svg::MeasureElem::new();
-        bar.add_markings(&self.program.scof, &mut curs, &cursor);
-        bar.add_staff_5();
+        // Alto clef has 0 steps offset
+        let mut bar = MeasureElem::new(Staff::new(5, 0));
+        if curs == self.program.cursor.first_marking() {
+            bar.add_cursor(&self.program.scof, &self.program.cursor);
+        }
+        bar.add_markings(&self.program.scof, &mut curs);
+        bar.add_staff();
 
         for elem in bar.elements {
-            match elem {
-                score2svg::Element::Rect(r) => {
-                    js! {
-                        var rect = document.createElementNS(@{SVGNS}, "rect");
-                        rect.setAttributeNS(null, "x", @{r.x});
-                        rect.setAttributeNS(null, "y", @{r.y});
-                        rect.setAttributeNS(null, "width", @{r.width});
-                        rect.setAttributeNS(null, "height", @{r.height});
-                        rect.setAttributeNS(null, "fill", @{r.fill});
-                        @{&bar_g}.appendChild(rect);
-                    }
-                },
-                score2svg::Element::Use(u) => {
-                    let xlink = format!("#{:x}", u.glyph as u32);
-                    js! {
-                        var stamp = document.createElementNS(@{SVGNS}, "use");
-                        stamp.setAttributeNS(null, "x", @{u.x});
-                        stamp.setAttributeNS(null, "y", @{u.y});
-                        stamp.setAttributeNS(null, "href", @{xlink});
-                        @{&bar_g}.appendChild(stamp);
-                    }
-                },
-                score2svg::Element::Path(p) => {
-                    js! {
-                        var shape = document.createElementNS(@{SVGNS}, "path");
-                        shape.setAttributeNS(null, "d", @{p.d});
-                        @{&bar_g}.appendChild(shape);
-                    };
-                },
-                _ => (),
+            if let Some(e) = create_elem(elem) {
+                js! { @{&bar_g}.appendChild(@{e}); }
             }
         }
         bar.width
+    }
+}
+
+/// Create DOM element from a score2svg Element
+fn create_elem(elem: score2svg::Element) -> Option<stdweb::Value> {
+    match elem {
+        score2svg::Element::Rect(r) => {
+            Some(js! {
+                var rect = document.createElementNS(@{SVGNS}, "rect");
+                rect.setAttributeNS(null, "x", @{r.x});
+                rect.setAttributeNS(null, "y", @{r.y});
+                rect.setAttributeNS(null, "width", @{r.width});
+                rect.setAttributeNS(null, "height", @{r.height});
+                var rx = @{r.rx};
+                if (rx !== null) {
+                    rect.setAttributeNS(null, "rx", rx);
+                }
+                var ry = @{r.ry};
+                if (ry !== null) {
+                    rect.setAttributeNS(null, "ry", ry);
+                }
+                rect.setAttributeNS(null, "fill", @{r.fill});
+                return rect;
+            })
+        },
+        score2svg::Element::Use(u) => {
+            let xlink = format!("#{:x}", u.glyph as u32);
+            Some(js! {
+                var stamp = document.createElementNS(@{SVGNS}, "use");
+                stamp.setAttributeNS(null, "x", @{u.x});
+                stamp.setAttributeNS(null, "y", @{u.y});
+                stamp.setAttributeNS(null, "href", @{xlink});
+                return stamp;
+            })
+        },
+        score2svg::Element::Path(p) => {
+            Some(js! {
+                var path = document.createElementNS(@{SVGNS}, "path");
+                path.setAttributeNS(null, "d", @{p.d});
+                return path;
+            })
+        },
+        _ => None,
     }
 }
 
@@ -284,7 +307,7 @@ fn main() {
         document().get_element_by_id("prompt").unwrap();
 
     window().add_event_listener(enclose!( (state) move |_: ResizeEvent| {
-        state.borrow().resize();
+        state.borrow().resize().unwrap();
     }));
 
     window().add_event_listener(
@@ -330,7 +353,7 @@ fn main() {
 
     log!("YA");
 
-    state.borrow().render_score();
+    state.borrow().render_score().unwrap();
 
     State::run(0.0, state.clone());
     stdweb::event_loop();

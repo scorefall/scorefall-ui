@@ -284,4 +284,14 @@ impl InputState {
         self.has_input = true;
         self.code_into_key(key, code, state, ic);
     }
+
+    /// Returns true if key was just pressed.
+    pub fn press(&self, key: Key) -> bool {
+        self.keys[key as usize].press()
+    }
+
+    /// Returns true if key is held down.
+    pub fn held(&self, key: Key) -> bool {
+        self.keys[key as usize].held()
+    }
 }

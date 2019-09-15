@@ -278,7 +278,7 @@ fn create_elem(elem: score2svg::Element) -> Option<stdweb::Value> {
             })
         },
         score2svg::Element::Use(u) => {
-            let xlink = format!("#{:x}", u.glyph as u32);
+            let xlink = format!("#{:x}", u.id);
             Some(js! {
                 var stamp = document.createElementNS(@{SVGNS}, "use");
                 stamp.setAttributeNS(null, "x", @{u.x});

@@ -244,6 +244,9 @@ impl State {
         if curs == self.program.cursor.first_marking() {
             bar.add_cursor(&self.program.scof, &self.program.cursor);
         }
+        if measure == 0 {
+            bar.add_signature();
+        }
         bar.add_markings(&self.program.scof, &mut curs);
         bar.add_staff();
 

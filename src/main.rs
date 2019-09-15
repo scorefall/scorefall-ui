@@ -112,37 +112,39 @@ impl State {
                 }
             }
             // Note Lengths
-            if self.input.press(Key::Q) || self.input.press(Key::Numpad4) {
+            if self.input.press(Key::Q) || self.input.press(Key::Numpad5) {
                 self.program.set_dur(1, 4);
                 self.render_measures();
-            } else if self.input.press(Key::W)  || self.input.press(Key::Numpad6) {
+            } else if self.input.press(Key::W)  || self.input.press(Key::Numpad7) {
                 self.program.set_dur(1, 1);
                 self.render_measures();
-            } else if self.input.press(Key::E)  || self.input.press(Key::Numpad3) {
+            } else if self.input.press(Key::T)  || self.input.press(Key::Numpad4) {
                 self.program.set_dur(1, 8);
                 self.render_measures();
-            } else if self.input.press(Key::R) || self.input.press(Key::Numpad2) {
+            } else if self.input.press(Key::Y) || self.input.press(Key::Numpad2) {
                 self.program.set_dur(1, 32);
                 self.render_measures();
-            } else if self.input.press(Key::T)  || self.input.press(Key::Numpad0) {
+            } /*else if self.input.press(Key::T)  || self.input.press(Key::Numpad0) {
                 self.program.tuplet();
                 self.render_measures();
-            } else if self.input.press(Key::A)  || self.input.press(Key::Numpad5) {
+            } */ else if self.input.press(Key::U)  || self.input.press(Key::Numpad6) {
                 self.program.set_dur(1, 2);
                 self.render_measures();
-            } else if self.input.press(Key::S)  || self.input.press(Key::Numpad3 ){
+            } else if self.input.press(Key::S)  || self.input.press(Key::Numpad3) {
                 self.program.set_dur(1, 16);
                 self.render_measures();
-            } else if self.input.press(Key::D)  || self.input.press(Key::Numpad7) {
+            } else if self.input.press(Key::Numpad8) {
                 self.program.set_dur(2, 1);
                 self.render_measures();
-            } else if self.input.press(Key::F) || self.input.press(Key::Numpad1) {
+            } else if self.input.press(Key::Numpad1) {
                 self.program.set_dur(1, 64);
                 self.render_measures();
-            } else if self.input.press(Key::G)  || self.input.press(Key::Numpad8) {
+            } else if self.input.press(Key::Numpad9) {
                 self.program.set_dur(4, 1);
                 self.render_measures();
-            } else if self.input.press(Key::Period) || self.input.press(Key::NumpadDot) {
+            } else if self.input.press(Key::Period)
+                || self.input.press(Key::NumpadDot)
+            {
                 self.program.dotted();
                 self.render_measures();
             }

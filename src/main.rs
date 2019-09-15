@@ -1,7 +1,7 @@
 #![recursion_limit = "128"]
 
 macro_rules! log {
-    () => (js! { console.log!("") });
+    () => (js! { console.log("") });
     ($($arg:tt)*) => {
         let text = format!("{}", format_args!($($arg)*));
         js! { console.log(@{text}) }
@@ -30,8 +30,9 @@ use stdweb::web::{
 
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::panic;
 
-use scof::Cursor;
+use scof::{Cursor, Duration};
 use score2svg::{MeasureElem, Staff};
 use scorefall::Program;
 
@@ -113,34 +114,34 @@ impl State {
             }
             // Note Lengths
             if self.input.press(Key::Q) || self.input.press(Key::Numpad5) {
-                self.program.set_dur(1, 4);
+                self.program.set_dur(Duration::Den4(1, 1, 0));
                 self.render_measures();
             } else if self.input.press(Key::W)  || self.input.press(Key::Numpad7) {
-                self.program.set_dur(1, 1);
+                self.program.set_dur(Duration::Num1(1, 1, 0));
                 self.render_measures();
             } else if self.input.press(Key::T)  || self.input.press(Key::Numpad4) {
-                self.program.set_dur(1, 8);
+                self.program.set_dur(Duration::Den8(1, 1, 0));
                 self.render_measures();
             } else if self.input.press(Key::Y) || self.input.press(Key::Numpad2) {
-                self.program.set_dur(1, 32);
+                self.program.set_dur(Duration::Den32(1, 1, 0));
                 self.render_measures();
             } /*else if self.input.press(Key::T)  || self.input.press(Key::Numpad0) {
                 self.program.tuplet();
                 self.render_measures();
             } */ else if self.input.press(Key::U)  || self.input.press(Key::Numpad6) {
-                self.program.set_dur(1, 2);
+                self.program.set_dur(Duration::Den2(1, 1, 0));
                 self.render_measures();
             } else if self.input.press(Key::S)  || self.input.press(Key::Numpad3) {
-                self.program.set_dur(1, 16);
+                self.program.set_dur(Duration::Den16(1, 1, 0));
                 self.render_measures();
             } else if self.input.press(Key::Numpad8) {
-                self.program.set_dur(2, 1);
+                self.program.set_dur(Duration::Num2(1, 1, 0));
                 self.render_measures();
             } else if self.input.press(Key::Numpad1) {
-                self.program.set_dur(1, 64);
+                self.program.set_dur(Duration::Den64(1, 1, 0));
                 self.render_measures();
             } else if self.input.press(Key::Numpad9) {
-                self.program.set_dur(4, 1);
+                self.program.set_dur(Duration::Num4(1, 1));
                 self.render_measures();
             } else if self.input.press(Key::Period)
                 || self.input.press(Key::NumpadDot)
@@ -298,8 +299,22 @@ fn create_elem(elem: score2svg::Element) -> Option<stdweb::Value> {
     }
 }
 
+fn panic_hook(panic_info: &std::panic::PanicInfo) {
+    let mut msg = panic_info.to_string();
+
+    log!("Custom panic: {:?}", msg);
+    js! { console.trace() }
+
+    std::process::exit(0);
+}
+
 fn main() {
     stdweb::initialize();
+    let hook = panic::take_hook();
+    panic::set_hook(Box::new(move |p| {
+        hook(p);
+        panic_hook(p);
+    }));
 
     let svg = document().get_element_by_id("canvas").unwrap();
     let state = Rc::new(RefCell::new(State::new(svg)));

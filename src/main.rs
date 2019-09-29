@@ -243,7 +243,7 @@ impl State {
         let low = "C4".parse::<Note>().unwrap().visual_distance().unwrap();
         let mut curs = Cursor::new(0, measure, 0, 0);
         // Alto clef has 0 steps offset
-        let mut bar = MeasureElem::new(Staff::new(5, Steps { 0: 4 }), high, low);
+        let mut bar = MeasureElem::new(Staff::new(5, Steps(4)), high, low);
         if curs == self.program.cursor.first_marking() {
             bar.add_cursor(&self.program.scof, &self.program.cursor);
         }

@@ -238,7 +238,7 @@ impl State {
             return bar_g;
         };
 
-        let mut curs = Cursor::new(measure, 0, 0);
+        let mut curs = Cursor::new(0, measure, 0, 0);
         // Alto clef has 0 steps offset
         let mut bar = MeasureElem::new(Staff::new(5, 0));
         if curs == self.program.cursor.first_marking() {

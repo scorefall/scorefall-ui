@@ -220,8 +220,9 @@ impl State {
 
     /// Render one measure
     fn render_measure(&self, measure: usize, offset_x: i32) -> i32 {
-        let bar_id = &format!("m{}", measure);
+        // FIXME: iterate through channels
         let offset_y = 0;
+        let bar_id = &format!("m{}", measure);
         let trans = &format!("translate({} {})", offset_x, offset_y);
         let svg = &self.svg;
         let bar_g = js! {
@@ -238,9 +239,11 @@ impl State {
             return bar_g;
         };
 
+        let high = "C4".parse().unwrap();
+        let low = "C4".parse().unwrap();
         let mut curs = Cursor::new(0, measure, 0, 0);
         // Alto clef has 0 steps offset
-        let mut bar = MeasureElem::new(Staff::new(5, 0));
+        let mut bar = MeasureElem::new(Staff::new(5, 4), high, low);
         if curs == self.program.cursor.first_marking() {
             bar.add_cursor(&self.program.scof, &self.program.cursor);
         }

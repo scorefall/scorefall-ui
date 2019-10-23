@@ -128,7 +128,7 @@ impl State {
             } /*else if self.input.press(Key::T)  || self.input.press(Key::Numpad0) {
                 self.program.tuplet();
                 self.render_measures();
-            } */ else if self.input.press(Key::U)  || self.input.press(Key::Numpad6) {
+            } */ else if self.input.press(Key::H)  || self.input.press(Key::Numpad6) {
                 self.program.set_dur(Duration::Den2(1, 1, 0));
                 self.render_measures();
             } else if self.input.press(Key::S)  || self.input.press(Key::Numpad3) {
@@ -239,8 +239,9 @@ impl State {
             return bar_g;
         };
 
-        let high = "C4".parse::<Note>().unwrap().visual_distance().unwrap();
-        let low = "C4".parse::<Note>().unwrap().visual_distance().unwrap();
+        let high = "QC4".parse::<Note>().unwrap().visual_distance().unwrap();
+        let low = "QC4".parse::<Note>().unwrap().visual_distance().unwrap();
+
         let mut curs = Cursor::new(0, measure, 0, 0);
         // Alto clef has 0 steps offset
         let mut bar = MeasureElem::new(Staff::new(5, Steps(4)), high, low);

@@ -1,12 +1,6 @@
 #![recursion_limit = "128"]
 
-macro_rules! log {
-    () => (js! { console.log("") });
-    ($($arg:tt)*) => {
-        let text = format!("{}", format_args!($($arg)*));
-        js! { console.log(@{text}) }
-    };
-}
+use cala::{info, note};
 
 macro_rules! enclose {
     ( ($( $x:ident ),*) $y:expr ) => {
@@ -32,7 +26,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::panic;
 
-use scof::{Cursor, Duration, Note, Steps};
+use scof::{Cursor, Fraction, Note, Steps, Pitch};
 use score2svg::{MeasureElem, Staff};
 use scorefall::Program;
 
@@ -67,7 +61,7 @@ impl State {
 
     /// Resize the SVG
     fn resize(&self) -> Result<()> {
-        log!("resize");
+        note!("resize");
         let svg = &self.svg;
         let viewbox = js! {
             var ratio = @{svg}.clientHeight / @{svg}.clientWidth;
@@ -114,34 +108,34 @@ impl State {
             }
             // Note Lengths
             if self.input.press(Key::Q) || self.input.press(Key::Numpad5) {
-                self.program.set_dur(Duration::Den4(1, 1, 0));
+                self.program.set_dur(Fraction::new(1, 4));
                 self.render_measures();
             } else if self.input.press(Key::W)  || self.input.press(Key::Numpad7) {
-                self.program.set_dur(Duration::Num1(1, 1, 0));
+                self.program.set_dur(Fraction::new(1, 1));
                 self.render_measures();
             } else if self.input.press(Key::T)  || self.input.press(Key::Numpad4) {
-                self.program.set_dur(Duration::Den8(1, 1, 0));
+                self.program.set_dur(Fraction::new(1, 8));
                 self.render_measures();
             } else if self.input.press(Key::Y) || self.input.press(Key::Numpad2) {
-                self.program.set_dur(Duration::Den32(1, 1, 0));
+                self.program.set_dur(Fraction::new(1, 32));
                 self.render_measures();
             } /*else if self.input.press(Key::T)  || self.input.press(Key::Numpad0) {
                 self.program.tuplet();
                 self.render_measures();
             } */ else if self.input.press(Key::H)  || self.input.press(Key::Numpad6) {
-                self.program.set_dur(Duration::Den2(1, 1, 0));
+                self.program.set_dur(Fraction::new(1, 2));
                 self.render_measures();
             } else if self.input.press(Key::S)  || self.input.press(Key::Numpad3) {
-                self.program.set_dur(Duration::Den16(1, 1, 0));
+                self.program.set_dur(Fraction::new(1, 16));
                 self.render_measures();
             } else if self.input.press(Key::Numpad8) {
-                self.program.set_dur(Duration::Num2(1, 1, 0));
+                self.program.set_dur(Fraction::new(2, 1));
                 self.render_measures();
             } else if self.input.press(Key::Numpad1) {
-                self.program.set_dur(Duration::Den64(1, 1, 0));
+                self.program.set_dur(Fraction::new(1, 64));
                 self.render_measures();
             } else if self.input.press(Key::Numpad9) {
-                self.program.set_dur(Duration::Num4(1, 1));
+                self.program.set_dur(Fraction::new(1, 1));
                 self.render_measures();
             } else if self.input.press(Key::Period)
                 || self.input.press(Key::NumpadDot)
@@ -203,7 +197,7 @@ impl State {
 
     /// Render the measures to the SVG
     fn render_measures(&self) {
-        log!("render measures");
+        note!("render measures");
         let svg = &self.svg;
         js! {
             var page = @{svg}.getElementById("page");
@@ -213,7 +207,7 @@ impl State {
         let mut offset_x = 0;
         for measure in 0..9 {
             let width = self.render_measure(measure, offset_x);
-            log!("measure: {}  width {}", measure, width);
+            note!("measure: {}  width {}", measure, width);
             offset_x += width;
         }
     }
@@ -239,8 +233,8 @@ impl State {
             return bar_g;
         };
 
-        let high = "QC4".parse::<Note>().unwrap().visual_distance().unwrap();
-        let low = "QC4".parse::<Note>().unwrap().visual_distance().unwrap();
+        let high = "C4".parse::<Pitch>().unwrap().visual_distance();
+        let low = "C4".parse::<Pitch>().unwrap().visual_distance();
 
         let mut curs = Cursor::new(0, measure, 0, 0);
         // Alto clef has 0 steps offset
@@ -309,7 +303,7 @@ fn create_elem(elem: score2svg::Element) -> Option<stdweb::Value> {
 fn panic_hook(panic_info: &std::panic::PanicInfo) {
     let mut msg = panic_info.to_string();
 
-    log!("Custom panic: {:?}", msg);
+    info!("Custom panic: {:?}", msg);
     js! { console.trace() }
 
     std::process::exit(0);
@@ -375,7 +369,7 @@ fn main() {
             }),
     );
 
-    log!("YA");
+    note!("YA");
 
     state.borrow().render_score().unwrap();
 

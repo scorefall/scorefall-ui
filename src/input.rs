@@ -1,3 +1,5 @@
+use cala::warn;
+
 /// State of a key.
 #[repr(u8)]
 #[derive(PartialEq, Copy, Clone)]
@@ -271,8 +273,7 @@ impl InputState {
             "Digit8" => Key::Num8,
             "Digit9" => Key::Num9,
             a => {
-                use stdweb::js;
-                log!("Unknown {}", a);
+                warn!("Unknown {}", a);
                 return;
             },
         } as usize] = state;

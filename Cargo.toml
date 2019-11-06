@@ -5,6 +5,7 @@ authors = ["Jeron Aldaron Lau <jeronlau@plopgrizzly.com>", "Douglas Lau <doug.p.
 edition = "2018"
 
 [dependencies]
+cala = "0.7"
 stdweb = "0.4"
 scof = { path = "../scof" }
 score2svg = { path = "../score2svg" }

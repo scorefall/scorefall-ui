@@ -26,7 +26,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::panic;
 
-use scof::{Cursor, Fraction, Note, Steps, Pitch};
+use scof::{Cursor, Fraction, Steps, Pitch};
 use score2svg::{MeasureElem, Staff};
 use scorefall::Program;
 
@@ -42,6 +42,7 @@ const SVGNS: &str = "http://www.w3.org/2000/svg";
 struct State {
     program: Program,
     time_old: f64,
+    #[allow(unused)] // FIXME: Implement commands.
     command: String,
     input: InputState,
     svg: stdweb::web::Element,
@@ -301,7 +302,7 @@ fn create_elem(elem: score2svg::Element) -> Option<stdweb::Value> {
 }
 
 fn panic_hook(panic_info: &std::panic::PanicInfo) {
-    let mut msg = panic_info.to_string();
+    let msg = panic_info.to_string();
 
     info!("Custom panic: {:?}", msg);
     js! { console.trace() }
@@ -329,7 +330,7 @@ fn main() {
     }));
 
     window().add_event_listener(
-        enclose!( (state) move |event: ContextMenuEvent| {
+        enclose!( (/*state*/) move |event: ContextMenuEvent| {
         //        js! {
         //            alert("success!");
         //        }
@@ -361,7 +362,7 @@ fn main() {
     }));
 
     window().add_event_listener(
-        enclose!( (state) move |event: MouseWheelEvent| {
+        enclose!( (/*state*/) move |event: MouseWheelEvent| {
         //        js! {
         //            alert("keydown!");
         //        }

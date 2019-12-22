@@ -367,7 +367,7 @@ fn main() {
         //            alert("keydown!");
         //        }
                 event.prevent_default();
-            }),
+        }),
     );
 
     note!("YA");
